@@ -1,0 +1,34 @@
+opcua:
+  endpoint: "opc.tcp://opcua-server:4840/UA/SolarSite"
+  tags:
+    - "PanelTemp"
+    - "Irradiance"
+    - "InverterPower"
+    - "DCVoltage"
+  poll_interval_seconds: 2
+
+mqtt:
+  broker: "tcp://mosquitto:1883"
+  topic: "spBv1.0/site1/DDATA/gateway1"
+
+buffer:
+  path: "/data/collector.db"
+
+# Routed through Toxiproxy rather than straight to postgres, so the
+# network partition demo can cut this specific link without touching
+# the OPC UA/MQTT adapters.
+sink:
+  dsn: "postgres://collector:collector@toxiproxy:5433/solar?sslmode=disable"
+
+alarms:
+  - tag: "PanelTemp"
+    operator: ">"
+    threshold: 60
+  - tag: "DCVoltage"
+    operator: "<"
+    threshold: 650
+
+rollup:
+  window_seconds: 30
+
+replay_interval_seconds: 5

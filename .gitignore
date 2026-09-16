@@ -1,0 +1,9 @@
+*.db
+*.db-journal
+node_modules/
+/collector
+/out
+.env
+.idea/
+.claude/
+CLAUDE.md

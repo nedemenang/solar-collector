@@ -1,0 +1,15 @@
+{
+  "name": "mqtt-sparkplug-publisher",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "main": "publish.js",
+  "scripts": {
+    "start": "node publish.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "mqtt": "^5.10.1",
+    "sparkplug-payload": "^1.0.3"
+  }
+}

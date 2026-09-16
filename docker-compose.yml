@@ -1,0 +1,64 @@
+services:
+  opcua-server:
+    build: ./simulators/opcua-server
+    ports:
+      - "4840:4840"
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./docker/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "1883:1883"
+
+  mqtt-publisher:
+    build: ./simulators/mqtt-publisher
+    environment:
+      MQTT_BROKER_URL: mqtt://mosquitto:1883
+      MQTT_TOPIC: spBv1.0/site1/DDATA/gateway1
+    depends_on:
+      - mosquitto
+
+  postgres:
+    image: timescale/timescaledb:latest-pg16
+    environment:
+      POSTGRES_USER: collector
+      POSTGRES_PASSWORD: collector
+      POSTGRES_DB: solar
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./db/migrations:/docker-entrypoint-initdb.d:ro
+    ports:
+      - "5434:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U collector -d solar"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  toxiproxy:
+    image: ghcr.io/shopify/toxiproxy:2.9.0
+    ports:
+      - "8474:8474" # admin API
+      - "5433:5433" # proxied postgres connection
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  collector:
+    build: .
+    environment:
+      OPCUA_ENDPOINT: opc.tcp://opcua-server:4840/UA/SolarSite
+      MQTT_BROKER: tcp://mosquitto:1883
+      SINK_DSN: postgres://collector:collector@toxiproxy:5433/solar?sslmode=disable
+      BUFFER_PATH: /data/collector.db
+    volumes:
+      - collector-data:/data
+    depends_on:
+      - opcua-server
+      - mosquitto
+      - toxiproxy
+
+volumes:
+  pg-data:
+  collector-data:
