@@ -38,16 +38,22 @@ func (p *Postgres) Close() {
 	p.pool.Close()
 }
 
-// Write upserts by reading ID, so replaying the same batch twice (e.g. the
-// process crashes after writing but before marking rows synced locally)
-// never produces duplicate rows in the sink.
+// Write upserts by (reading ID, ts), so replaying the same batch twice
+// (e.g. the process crashes after writing but before marking rows synced
+// locally) never produces duplicate rows in the sink. The conflict target
+// includes ts, not just id, because readings is a TimescaleDB hypertable
+// partitioned on ts (see db/migrations/0002_readings_hypertable.sql) —
+// every unique index on a hypertable must include the partitioning
+// column. This doesn't weaken idempotency: a given reading ID is only
+// ever produced once, with one fixed ts, so (id, ts) identifies the same
+// row as id alone would.
 func (p *Postgres) Write(ctx context.Context, readings []model.Reading) error {
 	batch := &pgx.Batch{}
 	for _, r := range readings {
 		batch.Queue(`
 			INSERT INTO readings (id, source, tag, value, ts)
 			VALUES ($1, $2, $3, $4, $5)
-			ON CONFLICT (id) DO UPDATE SET value = EXCLUDED.value, ts = EXCLUDED.ts
+			ON CONFLICT (id, ts) DO UPDATE SET value = EXCLUDED.value
 		`, r.ID, r.Source, r.Tag, r.Value, r.Timestamp)
 	}
 

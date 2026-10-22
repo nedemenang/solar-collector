@@ -125,7 +125,7 @@ from Postgres.
 | `simulators/opcua-server` | Node/`node-opcua` fake site hardware (drifting Double variables) |
 | `simulators/mqtt-publisher` | Node/`mqtt` fake gateway (Sparkplug B `DDATA`, encoded as Float) |
 | `docker/mosquitto` | Broker config for the compose stack |
-| `db/migrations` | Postgres/Timescale schema (`readings`, `alarms`, `rollups`) |
+| `db/migrations` | Postgres/Timescale schema (`readings` is a hypertable partitioned on `ts`; `alarms`, `rollups` are plain tables) |
 | `scripts/toxiproxy-setup.sh`, `scripts/toggle-partition.sh` | Create the Postgres proxy, then cut/restore it on demand |
 
 ## Running the full stack
